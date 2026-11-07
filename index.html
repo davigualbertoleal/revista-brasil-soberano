@@ -243,7 +243,6 @@ button { font: inherit; color: inherit; }
 .progress i { display: block; height: 100%; width: 0; background: var(--beam); transition: width 0.25s ease, opacity 0.6s ease; }
 
 @media (max-width: 520px) {
-  #btnFs { display: none; }
   .brand .file { display: none; }
   .brand h1 { font-size: 22px; }
   .drop { padding: 26px 20px 22px; }
@@ -626,23 +625,9 @@ button { font: inherit; color: inherit; }
   });
 
   $('btnPick').addEventListener('click', function () { fileInput.click(); });
-  $('btnOpen').addEventListener('click', function () { fileInput.click(); });
   fileInput.addEventListener('change', function () {
     openFile(fileInput.files && fileInput.files[0]);
     fileInput.value = '';
-  });
-
-  var glowBtn = $('btnGlow');
-  glowBtn.addEventListener('click', function () {
-    var off = root.classList.toggle('no-glow');
-    glowBtn.setAttribute('aria-pressed', off ? 'false' : 'true');
-  });
-
-  $('btnFs').addEventListener('click', function () {
-    try {
-      if (document.fullscreenElement) document.exitFullscreen();
-      else root.requestFullscreen().catch(function () {});
-    } catch (e) {}
   });
 
   window.addEventListener('dragover', function (e) { e.preventDefault(); dropEl.classList.add('over'); });
