@@ -644,7 +644,7 @@ button { font: inherit; color: inherit; }
     setStatus('Não consegui carregar as bibliotecas do livro. Confere a internet e recarrega a página.');
     return;
   }
-  setStatus('Procurando o PDF…');
+  setStatus('Isso Pode Demorar Um Pouco…');
   findPdf().then(function (found) {
     if (found) {
       showPdf(found.bytes, nameOf(found.path), false);
