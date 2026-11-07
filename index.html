@@ -538,7 +538,7 @@ button { font: inherit; color: inherit; }
 
   function showPdf(bytes, name, persist) {
     var my = ++token;
-    setStatus('Abrindo o PDF…');
+    setStatus('Isso Pode Demorar Um Pouco…');
     return openDoc(bytes).then(function (pdf) {
       if (my !== token) return;
       return pdf.getPage(1).then(function (first) {
