@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Flipbook das Ideias</title>
+<title>brasil soberano rs</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -242,12 +242,52 @@ button { font: inherit; color: inherit; }
 }
 .progress i { display: block; height: 100%; width: 0; background: var(--beam); transition: width 0.25s ease, opacity 0.6s ease; }
 
+/* Ouvir e ler o texto */
+.tools { display: flex; align-items: center; gap: 10px; margin-left: 8px; }
+.nav[aria-pressed="true"] { background: var(--beam); color: #1a1208; border-color: transparent; }
+.nav .ico-stop { display: none; fill: currentColor; stroke: none; }
+.nav[aria-pressed="true"] .ico-play { display: none; }
+.nav[aria-pressed="true"] .ico-stop { display: block; }
+.count b { white-space: nowrap; }
+#btnText svg { width: 22px; height: 22px; }
+
+.sheet {
+  position: fixed;
+  z-index: 4;
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  left: max(16px, env(safe-area-inset-left, 0px));
+  width: min(380px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: rgba(14, 14, 18, 0.9);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.sheet header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 10px 10px 16px; border-bottom: 1px solid var(--line); }
+.sheet header b { font-family: var(--f-display); font-weight: 400; font-size: 20px; }
+.sheet .x { appearance: none; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; font-size: 18px; line-height: 1; }
+.sheet .x:hover { background: var(--panel-hi); }
+.sheet-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 18px; font-size: 17px; line-height: 1.65; user-select: text; -webkit-user-select: text; }
+.sheet-body h3 { margin: 0 0 6px; font-family: var(--f-mono); font-weight: 500; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--beam); }
+.sheet-body p { margin: 0 0 20px; white-space: pre-line; }
+.sheet-body p.none { color: var(--ink-dim); font-style: italic; }
+@media (max-width: 760px) {
+  .sheet { top: auto; right: max(16px, env(safe-area-inset-right, 0px)); width: auto; height: 46vh; }
+}
+
 @media (max-width: 520px) {
   .brand .file { display: none; }
   .brand h1 { font-size: 22px; }
   .drop { padding: 26px 20px 22px; }
-  .bottom { gap: 12px; }
-  .count { min-width: 120px; }
+  .bottom { gap: 8px; flex-wrap: wrap; }
+  .count { min-width: 92px; }
+  .count b { font-size: 18px; }
+  .tools { margin-left: 4px; gap: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
   :root { transition: none; }
@@ -285,7 +325,24 @@ button { font: inherit; color: inherit; }
   <button class="nav" id="next" type="button" aria-label="Próxima página" disabled>
     <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
   </button>
+  <div class="tools">
+    <button class="nav" id="btnListen" type="button" aria-pressed="false" aria-label="Ouvir a revista" title="Ouvir a revista">
+      <svg class="ico-play" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+      <svg class="ico-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+    </button>
+    <button class="nav" id="btnText" type="button" aria-pressed="false" aria-label="Libras: mostrar o texto das páginas pro VLibras" title="Libras (texto das páginas)">
+      <svg viewBox="0 0 24 24"><path d="M7.5 12V6.5M11 11V4.5M14.5 11V5.5M18 12.5V8.5"/><path d="M7.5 12l-2.2-1.7a1.4 1.4 0 0 0-1.9 2L7 16.5c1.4 1.8 3 3.5 6 3.5 3.2 0 5-2.2 5-5.5v-2"/></svg>
+    </button>
+  </div>
 </footer>
+
+<aside class="sheet" id="sheet" hidden aria-label="Texto das páginas">
+  <header>
+    <b>Texto das páginas</b>
+    <button class="x" id="sheetClose" type="button" aria-label="Fechar o texto">&times;</button>
+  </header>
+  <div class="sheet-body" id="sheetBody" lang="pt-BR" tabindex="0"></div>
+</aside>
 
 <input type="file" id="file" accept="application/pdf,.pdf" hidden>
 
@@ -303,6 +360,10 @@ button { font: inherit; color: inherit; }
   var stage = $('stage'), dropEl = $('drop'), fileInput = $('file'), msgEl = $('msg');
   var prevBtn = $('prev'), nextBtn = $('next'), lbl = $('lbl'), tot = $('tot');
   var barEl = $('bar'), fileNameEl = $('fileName');
+  var listenBtn = $('btnListen'), textBtn = $('btnText'), sheetEl = $('sheet'), sheetBody = $('sheetBody'), sheetClose = $('sheetClose');
+  var synth = window.speechSynthesis || null;
+  var curPdf = null, textCache = [], sheetToken = 0;
+  var reading = false, readToken = 0, pendingFlip = 0, flipTimer = 0, utter = null;
 
   var pageFlip = null, bookEl = null;
   var items = [], colors = [], imgs = [], urls = [];
@@ -393,6 +454,173 @@ button { font: inherit; color: inherit; }
     curIdx = idx;
     updateLabel();
     updateAmbient();
+    renderSheet();
+  }
+
+  /* ---------- texto de cada página ---------- */
+  function cleanText(t) {
+    var s = t.replace(/­/g, '')
+      .replace(/-\n(?=[a-zà-ÿ])/g, '')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/ *\n */g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+    /* junta linhas cortadas no meio da frase; títulos e fins de frase ficam em linha própria */
+    var lines = s.split('\n'), out = '';
+    lines.forEach(function (ln, k) {
+      if (k) {
+        var prev = lines[k - 1];
+        out += (prev && ln && prev.length >= 32 && !/[.!?…:;]$/.test(prev)) ? ' ' : '\n';
+      }
+      out += ln;
+    });
+    return out;
+  }
+
+  function getText(i) {
+    var it = items[i];
+    if (!it || it.blank || !curPdf) return Promise.resolve('');
+    if (!textCache[i]) {
+      textCache[i] = curPdf.getPage(it.num)
+        .then(function (p) { return p.getTextContent(); })
+        .then(function (tc) {
+          var out = '';
+          tc.items.forEach(function (t) { out += t.str + (t.hasEOL ? '\n' : ''); });
+          return cleanText(out);
+        })
+        .catch(function () { return ''; });
+    }
+    return textCache[i];
+  }
+
+  function pageTitle(idx) {
+    if (idx === 0) return 'Capa';
+    if (idx === total - 1) return 'Contracapa';
+    return 'Pág. ' + items[idx].num;
+  }
+
+  function renderSheet() {
+    if (sheetEl.hidden) return;
+    var vis = visible(curIdx), my = ++sheetToken;
+    Promise.all(vis.map(function (i) { return getText(i); })).then(function (texts) {
+      if (my !== sheetToken) return;
+      sheetBody.textContent = '';
+      vis.forEach(function (idx, k) {
+        var it = items[idx];
+        if (!it || it.blank) return;
+        var h = document.createElement('h3');
+        h.textContent = pageTitle(idx);
+        var p = document.createElement('p');
+        p.textContent = texts[k] || 'Sem texto selecionável nesta página.';
+        if (!texts[k]) p.className = 'none';
+        sheetBody.appendChild(h);
+        sheetBody.appendChild(p);
+      });
+      sheetBody.scrollTop = 0;
+    });
+  }
+
+  function toggleSheet(open) {
+    sheetEl.hidden = !open;
+    textBtn.setAttribute('aria-pressed', open ? 'true' : 'false');
+    if (open) renderSheet();
+  }
+
+  /* ---------- leitura em voz alta ---------- */
+  function ptVoice() {
+    var vs = synth.getVoices() || [];
+    var br = vs.filter(function (v) { return /^pt[-_]BR/i.test(v.lang); });
+    var pool = br.length ? br : vs.filter(function (v) { return /^pt/i.test(v.lang); });
+    var best = pool.filter(function (v) { return /natural|neural|google|francisca|thalita|antonio|luciana|felipe/i.test(v.name); })[0];
+    return best || pool[0] || null;
+  }
+
+  function chunksOf(text) {
+    var flat = text.replace(/\s+/g, ' ').trim();
+    if (!flat) return [];
+    var sentences = flat.match(/[^.!?…;:]+[.!?…;:]*\s*/g) || [flat];
+    var out = [], cur = '';
+    sentences.forEach(function (sn) {
+      if (cur && (cur + sn).length > 180) { out.push(cur.trim()); cur = ''; }
+      cur += sn;
+      while (cur.length > 260) {
+        var cut = cur.lastIndexOf(' ', 220);
+        if (cut < 80) cut = 220;
+        out.push(cur.slice(0, cut).trim());
+        cur = cur.slice(cut);
+      }
+    });
+    if (cur.trim()) out.push(cur.trim());
+    return out;
+  }
+
+  function speakList(chunks, my, done) {
+    var k = 0;
+    (function next() {
+      if (my !== readToken) return;
+      if (k >= chunks.length) { done(); return; }
+      var u = new SpeechSynthesisUtterance(chunks[k++]);
+      u.lang = 'pt-BR';
+      var v = ptVoice();
+      if (v) u.voice = v;
+      u.onend = next;
+      u.onerror = function () { if (my === readToken) next(); };
+      utter = u;
+      synth.speak(u);
+    })();
+  }
+
+  function flash(t) {
+    setStatus(t);
+    setTimeout(function () { if (msgEl.textContent === t) setStatus(''); }, 2200);
+  }
+
+  function setReading(on) {
+    reading = on;
+    listenBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    listenBtn.setAttribute('aria-label', on ? 'Parar a leitura' : 'Ouvir a revista');
+    listenBtn.title = on ? 'Parar a leitura' : 'Ouvir a revista';
+  }
+
+  function stopReading() {
+    readToken++;
+    pendingFlip = 0;
+    clearTimeout(flipTimer);
+    if (synth) { try { synth.cancel(); } catch (e) {} }
+    setReading(false);
+  }
+
+  function readCurrent(my) {
+    var vis = visible(curIdx);
+    Promise.all(vis.map(function (i) { return getText(i); })).then(function (texts) {
+      if (my !== readToken) return;
+      var chunks = chunksOf(texts.join('\n'));
+      var after = function () {
+        if (my !== readToken) return;
+        var last = vis[vis.length - 1];
+        if (!pageFlip || last >= total - 1) { stopReading(); return; }
+        pendingFlip = my;
+        pageFlip.flipNext();
+        flipTimer = setTimeout(function () { if (pendingFlip === my) stopReading(); }, 2500);
+      };
+      if (!chunks.length) { flash('Sem texto nessas páginas.'); setTimeout(after, 700); return; }
+      speakList(chunks, my, after);
+    });
+  }
+
+  function onFlipForReading() {
+    if (!reading) return;
+    clearTimeout(flipTimer);
+    if (pendingFlip && pendingFlip === readToken) {
+      var my = pendingFlip;
+      pendingFlip = 0;
+      readCurrent(my);
+    } else {
+      readToken++;
+      pendingFlip = 0;
+      try { synth.cancel(); } catch (e) {}
+      readCurrent(readToken);
+    }
   }
 
   /* ---------- tamanho do livro ---------- */
@@ -473,7 +701,7 @@ button { font: inherit; color: inherit; }
       startPage: 0
     });
     pageFlip.loadFromHTML(el.querySelectorAll('.page'));
-    pageFlip.on('flip', function (e) { onFlip(e.data); });
+    pageFlip.on('flip', function (e) { onFlip(e.data); onFlipForReading(); });
     pageFlip.on('changeOrientation', function () { onFlip(pageFlip.getCurrentPageIndex()); });
     onFlip(0);
   }
@@ -537,6 +765,7 @@ button { font: inherit; color: inherit; }
   }
 
   function showPdf(bytes, name, persist) {
+    stopReading();
     var my = ++token;
     setStatus('Isso Pode Demorar Um Pouco…');
     return openDoc(bytes).then(function (pdf) {
@@ -550,6 +779,8 @@ button { font: inherit; color: inherit; }
         if (pdfCount >= 3 && (pdfCount - 2) % 2 === 1) items.splice(pdfCount - 1, 0, { num: null, blank: true });
         total = items.length;
         colors = new Array(total);
+        curPdf = pdf;
+        textCache = [];
         curIdx = 0;
         dropEl.hidden = true;
         fileNameEl.textContent = name;
@@ -639,6 +870,26 @@ button { font: inherit; color: inherit; }
     openFile(f);
   });
 
+  textBtn.addEventListener('click', function () { toggleSheet(sheetEl.hidden); });
+  sheetClose.addEventListener('click', function () { toggleSheet(false); });
+
+  if (!synth || typeof SpeechSynthesisUtterance === 'undefined') {
+    listenBtn.hidden = true;
+  } else {
+    listenBtn.addEventListener('click', function () {
+      if (!pageFlip) return;
+      if (reading) { stopReading(); return; }
+      setReading(true);
+      readToken++;
+      try {
+        synth.cancel();
+        synth.speak(new SpeechSynthesisUtterance(''));
+      } catch (e) {}
+      readCurrent(readToken);
+    });
+    window.addEventListener('pagehide', function () { try { synth.cancel(); } catch (e) {} });
+  }
+
   /* ---------- início ---------- */
   if (!window.pdfjsLib || !window.St) {
     setStatus('Não consegui carregar as bibliotecas do livro. Confere a internet e recarrega a página.');
@@ -654,6 +905,17 @@ button { font: inherit; color: inherit; }
     }
   });
 })();
+</script>
+<div vw class="enabled">
+  <div vw-access-button class="active"></div>
+  <div vw-plugin-wrapper>
+    <div class="vw-plugin-top-wrapper"></div>
+  </div>
+</div>
+<script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+<script>
+  try { new window.VLibras.Widget('https://vlibras.gov.br/app'); }
+  catch (e) { console.warn('VLibras indisponível', e); }
 </script>
 </body>
 </html>
