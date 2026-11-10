@@ -308,23 +308,20 @@ button { font: inherit; color: inherit; }
 .sheet-body p { margin: 0 0 20px; white-space: pre-line; }
 .sheet-body p.none { color: var(--ink-dim); font-style: italic; }
 .slow {
-  position: fixed;
-  right: max(16px, calc(50% - 190px));
-  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
-  left: auto;
-  transform: none;
-  z-index: 6;
-
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 8px 14px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.75);
   border: 1px solid var(--line);
   color: var(--beam);
   font-size: 13px;
+  line-height: 1.2;
   text-decoration: none;
   text-align: center;
-  max-width: calc(100vw - 32px);
-  white-space: normal;
+  max-width: 180px;
 }
 
 @media (max-width: 520px) {
@@ -369,7 +366,6 @@ button { font: inherit; color: inherit; }
     <small class="tech" id="tech"></small>
   </section>
   <p class="msg" id="msg" role="status" aria-live="polite"></p>
-  <a class="slow" id="slow" href="legacy.html" hidden>Demorando? Abrir a versão leve</a>
 </main>
 
 <footer class="bar bottom">
