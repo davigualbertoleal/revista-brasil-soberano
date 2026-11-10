@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>brasil soberano rs</title>
+<title>revista.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -314,6 +314,11 @@ button { font: inherit; color: inherit; }
     <button class="btn" id="btnPick" type="button">Escolher PDF</button>
     <small>Nenhum PDF "revista" achado na pasta do site. Coloca ele na pasta e recarrega, ou solta aqui pra testar.</small>
   </section>
+  <section class="drop" id="retry" hidden>
+    <h2>Não deu pra abrir a revista</h2>
+    <p>Quase sempre é internet fraca ou o navegador de dentro de um aplicativo (Instagram, WhatsApp). Tenta de novo, ou abre este link direto no Chrome ou no Safari.</p>
+    <button class="btn" id="btnRetry" type="button">Tentar de novo</button>
+  </section>
   <p class="msg" id="msg" role="status" aria-live="polite"></p>
 </main>
 
@@ -359,14 +364,15 @@ button { font: inherit; color: inherit; }
   var root = document.documentElement;
   var stage = $('stage'), dropEl = $('drop'), fileInput = $('file'), msgEl = $('msg');
   var prevBtn = $('prev'), nextBtn = $('next'), lbl = $('lbl'), tot = $('tot');
-  var barEl = $('bar'), fileNameEl = $('fileName');
+  var barEl = $('bar'), fileNameEl = $('fileName'), retryEl = $('retry');
   var listenBtn = $('btnListen'), textBtn = $('btnText'), sheetEl = $('sheet'), sheetBody = $('sheetBody'), sheetClose = $('sheetClose');
   var synth = window.speechSynthesis || null;
   var curPdf = null, textCache = [], sheetToken = 0;
   var reading = false, readToken = 0, pendingFlip = 0, flipTimer = 0, utter = null;
 
   var pageFlip = null, bookEl = null;
-  var items = [], colors = [], imgs = [], urls = [];
+  var items = [], colors = [], imgs = [], blobs = [], shown = {};
+  var DISPLAY_AHEAD = 5, netFail = false;
   var total = 0, pdfCount = 0, aspect = 0.7, token = 0, curIdx = 0;
 
   function setStatus(t) { msgEl.textContent = t || ''; }
@@ -455,6 +461,7 @@ button { font: inherit; color: inherit; }
     updateLabel();
     updateAmbient();
     renderSheet();
+    syncImages();
   }
 
   /* ---------- texto de cada página ---------- */
@@ -650,8 +657,8 @@ button { font: inherit; color: inherit; }
     if (pageFlip) { try { pageFlip.destroy(); } catch (e) {} pageFlip = null; }
     if (bookEl && bookEl.parentNode) bookEl.parentNode.removeChild(bookEl);
     bookEl = null;
-    urls.forEach(function (u) { URL.revokeObjectURL(u); });
-    urls = []; imgs = [];
+    Object.keys(shown).forEach(function (k) { URL.revokeObjectURL(shown[k]); });
+    shown = {}; blobs = []; imgs = [];
   }
 
   function buildBook() {
@@ -709,7 +716,34 @@ button { font: inherit; color: inherit; }
   /* ---------- PDF ---------- */
   function openDoc(bytes) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_SRC;
-    return pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+    return pdfjsLib.getDocument({ data: bytes }).promise;
+  }
+
+  function syncImages() {
+    if (!total) return;
+    var vis = visible(curIdx);
+    var lo = vis[0] - DISPLAY_AHEAD, hi = vis[vis.length - 1] + DISPLAY_AHEAD;
+    for (var i = 0; i < total; i++) {
+      var img = imgs[i];
+      if (!img) continue;
+      var want = i >= lo && i <= hi && blobs[i];
+      if (want && !shown[i]) {
+        shown[i] = URL.createObjectURL(blobs[i]);
+        (function (im) { im.onload = function () { im.parentNode.classList.add('ready'); }; })(img);
+        img.src = shown[i];
+      } else if (!want && shown[i]) {
+        img.parentNode.classList.remove('ready');
+        img.removeAttribute('src');
+        URL.revokeObjectURL(shown[i]);
+        delete shown[i];
+      }
+    }
+  }
+
+  function targetHeight() {
+    var h = bookEl ? bookEl.clientHeight : 800;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    return Math.max(700, Math.min(1800, Math.round(h * dpr * 1.15)));
   }
 
   function renderOne(pdf, i, my) {
@@ -717,7 +751,7 @@ button { font: inherit; color: inherit; }
     if (it.blank) { colors[i] = null; return Promise.resolve(); }
     return pdf.getPage(it.num).then(function (page) {
       var base = page.getViewport({ scale: 1 });
-      var scale = Math.min(1800 / base.height, 1400 / base.width);
+      var scale = Math.min(targetHeight() / base.height, 1400 / base.width);
       var vp = page.getViewport({ scale: scale });
       var c = document.createElement('canvas');
       c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
@@ -725,18 +759,14 @@ button { font: inherit; color: inherit; }
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, c.width, c.height);
       return page.render({ canvasContext: ctx, viewport: vp }).promise.then(function () {
-        if (my !== token) return;
+        if (my !== token) { c.width = c.height = 0; return; }
         colors[i] = dominant(c);
-        return new Promise(function (res) { c.toBlob(res, 'image/jpeg', 0.9); }).then(function (blob) {
-          if (my !== token || !blob) return;
-          var url = URL.createObjectURL(blob);
-          urls.push(url);
-          var img = imgs[i];
-          if (img) {
-            img.onload = function () { img.parentNode.classList.add('ready'); };
-            img.src = url;
-          }
+        return new Promise(function (res) { c.toBlob(res, 'image/jpeg', 0.85); }).then(function (blob) {
+          c.width = c.height = 0;
           page.cleanup();
+          if (my !== token || !blob) return;
+          blobs[i] = blob;
+          syncImages();
           updateAmbient();
         });
       });
@@ -744,22 +774,28 @@ button { font: inherit; color: inherit; }
   }
 
   function renderAll(pdf, my) {
-    var order = [0];
-    if (total > 1) order.push(total - 1);
-    for (var k = 1; k < total - 1; k++) order.push(k);
-    var next = 0, done = 0;
+    var pending = [];
+    for (var k = 0; k < total; k++) if (!items[k].blank) pending.push(k);
+    var all = pending.length, done = 0;
     barEl.style.opacity = '1';
     barEl.style.width = '0';
+    function nearest() {
+      var best = 0;
+      for (var q = 1; q < pending.length; q++) {
+        if (Math.abs(pending[q] - curIdx) < Math.abs(pending[best] - curIdx)) best = q;
+      }
+      return pending.splice(best, 1)[0];
+    }
     function lane() {
-      if (next >= order.length || my !== token) return Promise.resolve();
-      var i = order[next++];
+      if (!pending.length || my !== token) return Promise.resolve();
+      var i = nearest();
       return renderOne(pdf, i, my).catch(function (e) { console.warn('página', i + 1, e); }).then(function () {
         done++;
-        if (my === token) barEl.style.width = (done / order.length * 100) + '%';
+        if (my === token) barEl.style.width = (done / all * 100) + '%';
         return lane();
       });
     }
-    return Promise.all([lane(), lane(), lane()]).then(function () {
+    return Promise.all([lane(), lane()]).then(function () {
       if (my === token) setTimeout(function () { barEl.style.opacity = '0'; }, 400);
     });
   }
@@ -783,6 +819,7 @@ button { font: inherit; color: inherit; }
         textCache = [];
         curIdx = 0;
         dropEl.hidden = true;
+        retryEl.hidden = true;
         fileNameEl.textContent = name;
         setStatus('');
         buildBook();
@@ -791,8 +828,8 @@ button { font: inherit; color: inherit; }
     }).catch(function (e) {
       console.error(e);
       if (my !== token) return;
-      setStatus('Não consegui ler esse PDF. Confere se o arquivo abre normal e não tem senha.');
-      if (!pageFlip) dropEl.hidden = false;
+      if (!pageFlip) { setStatus(''); retryEl.hidden = false; }
+      else setStatus('Não consegui ler esse PDF. Confere se o arquivo abre normal e não tem senha.');
     });
   }
 
@@ -811,22 +848,53 @@ button { font: inherit; color: inherit; }
   function urlOf(path) { return path.split('/').map(encodeURIComponent).join('/'); }
   function nameOf(path) { return path.split('/').pop(); }
 
+  function fail(msg, flag) { var e = new Error(msg); e[flag] = true; return e; }
+
   function fetchPdf(path) {
     return fetch(urlOf(path), { cache: 'no-cache' }).then(function (r) {
+      if (r.status === 404) throw fail('404', 'notFound');
       if (!r.ok) throw new Error('http ' + r.status);
-      return r.arrayBuffer();
+      var size = +r.headers.get('Content-Length') || 0;
+      if (!r.body || !r.body.getReader || !size) return r.arrayBuffer();
+      var reader = r.body.getReader(), got = 0, parts = [];
+      return (function pump() {
+        return reader.read().then(function (x) {
+          if (x.done) {
+            var u = new Uint8Array(got), o = 0;
+            parts.forEach(function (p) { u.set(p, o); o += p.length; });
+            return u.buffer;
+          }
+          parts.push(x.value);
+          got += x.value.length;
+          setStatus('Isso Pode Demorar Um Pouco… ' + Math.min(99, Math.round(got / size * 100)) + '%');
+          return pump();
+        });
+      })();
     }).then(function (buf) {
       var u = new Uint8Array(buf);
-      if (String.fromCharCode(u[0], u[1], u[2], u[3]) !== '%PDF') throw new Error('não é PDF');
+      if (u.length < 4 || String.fromCharCode(u[0], u[1], u[2], u[3]) !== '%PDF') throw fail('não é PDF', 'notPdf');
       return u;
+    });
+  }
+
+  function fetchWithRetry(path, n) {
+    n = n || 0;
+    return fetchPdf(path).catch(function (e) {
+      if ((e && (e.notFound || e.notPdf)) || n >= 2) throw e;
+      return new Promise(function (res) { setTimeout(res, 1500 * (n + 1)); }).then(function () {
+        return fetchWithRetry(path, n + 1);
+      });
     });
   }
 
   function firstThatLoads(paths) {
     return paths.reduce(function (chain, path) {
       return chain.then(function (found) {
-        if (found) return found;
-        return fetchPdf(path).then(function (bytes) { return { path: path, bytes: bytes }; }, function () { return null; });
+        if (found || netFail) return found;
+        return fetchWithRetry(path).then(function (bytes) { return { path: path, bytes: bytes }; }, function (e) {
+          if (!e || !(e.notFound || e.notPdf)) netFail = true;
+          return null;
+        });
       });
     }, Promise.resolve(null));
   }
@@ -870,6 +938,7 @@ button { font: inherit; color: inherit; }
     openFile(f);
   });
 
+  $('btnRetry').addEventListener('click', function () { location.reload(); });
   textBtn.addEventListener('click', function () { toggleSheet(sheetEl.hidden); });
   sheetClose.addEventListener('click', function () { toggleSheet(false); });
 
@@ -899,6 +968,9 @@ button { font: inherit; color: inherit; }
   findPdf().then(function (found) {
     if (found) {
       showPdf(found.bytes, nameOf(found.path), false);
+    } else if (netFail) {
+      setStatus('');
+      retryEl.hidden = false;
     } else {
       setStatus('');
       dropEl.hidden = false;
