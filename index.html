@@ -3,7 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>revista.</title>
+<script>
+(function () {
+  try {
+    if (/[?&]livro=1/.test(location.search)) return;
+    var ok = window.Promise && window.fetch && window.Uint8Array && window.Blob && window.Worker &&
+      window.URLSearchParams && window.URL && window.URL.createObjectURL &&
+      window.HTMLCanvasElement && HTMLCanvasElement.prototype.toBlob;
+    try { new Function('"use strict"; class A {} var f = (a) => a; var t = `x${1}`; let b = 1; const c = 2;'); }
+    catch (e) { if (e instanceof SyntaxError) ok = false; }
+    if (!ok) location.replace('legacy.html');
+  } catch (e) { location.replace('legacy.html'); }
+})();
+</script>
+<title>Flipbook das Ideias</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -55,7 +68,10 @@ button { font: inherit; color: inherit; }
 /* Luz ambiente */
 .ambient {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
@@ -65,7 +81,13 @@ button { font: inherit; color: inherit; }
 .ambient::before {
   content: "";
   position: absolute;
-  inset: -12%;
+  top: -12%;
+  right: -12%;
+  bottom: -12%;
+  left: -12%;
+  background:
+    radial-gradient(46% 60% at 35% 46%, var(--c1), transparent 74%),
+    radial-gradient(46% 60% at 65% 46%, var(--c2), transparent 74%);
   background:
     radial-gradient(46% 60% at 35% 46%, color-mix(in srgb, var(--c1) 78%, transparent), transparent 74%),
     radial-gradient(46% 60% at 65% 46%, color-mix(in srgb, var(--c2) 78%, transparent), transparent 74%),
@@ -75,7 +97,10 @@ button { font: inherit; color: inherit; }
 .ambient::after {
   content: "";
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   background: radial-gradient(125% 95% at 50% 46%, transparent 38%, rgba(0, 0, 0, 0.7) 100%);
 }
 
@@ -173,7 +198,10 @@ button { font: inherit; color: inherit; }
 .page.ready img { opacity: 1; }
 .page .ph {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: grid;
   place-items: center;
   background: #f1f0f4;
@@ -185,7 +213,10 @@ button { font: inherit; color: inherit; }
 .page::after {
   content: "";
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   pointer-events: none;
 }
 .page.l::after { background: linear-gradient(to left, rgba(0, 0, 0, 0.16), transparent 7%); }
@@ -276,6 +307,25 @@ button { font: inherit; color: inherit; }
 .sheet-body h3 { margin: 0 0 6px; font-family: var(--f-mono); font-weight: 500; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--beam); }
 .sheet-body p { margin: 0 0 20px; white-space: pre-line; }
 .sheet-body p.none { color: var(--ink-dim); font-style: italic; }
+.slow {
+  position: absolute;
+  left: 50%;
+  bottom: 58px;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--line);
+  color: var(--beam);
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+#retry .btn { margin: 0 10px 10px 0; }
+#retry a.btn { display: inline-block; text-decoration: none; }
+#retry .tech { display: block; margin-top: 14px; font: 11px/1.5 var(--f-mono); color: var(--ink-dim); word-break: break-word; }
+#retry a.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); font-weight: 500; }
 @media (max-width: 760px) {
   .sheet { top: auto; right: max(16px, env(safe-area-inset-right, 0px)); width: auto; height: 46vh; }
 }
@@ -318,8 +368,11 @@ button { font: inherit; color: inherit; }
     <h2>Não deu pra abrir a revista</h2>
     <p>Quase sempre é internet fraca ou o navegador de dentro de um aplicativo (Instagram, WhatsApp). Tenta de novo, ou abre este link direto no Chrome ou no Safari.</p>
     <button class="btn" id="btnRetry" type="button">Tentar de novo</button>
+    <a class="btn ghost" href="legacy.html">Abrir a versão leve</a>
+    <small class="tech" id="tech"></small>
   </section>
   <p class="msg" id="msg" role="status" aria-live="polite"></p>
+  <a class="slow" id="slow" href="legacy.html" hidden>Demorando? Abrir a versão leve</a>
 </main>
 
 <footer class="bar bottom">
@@ -364,7 +417,7 @@ button { font: inherit; color: inherit; }
   var root = document.documentElement;
   var stage = $('stage'), dropEl = $('drop'), fileInput = $('file'), msgEl = $('msg');
   var prevBtn = $('prev'), nextBtn = $('next'), lbl = $('lbl'), tot = $('tot');
-  var barEl = $('bar'), fileNameEl = $('fileName'), retryEl = $('retry');
+  var barEl = $('bar'), fileNameEl = $('fileName'), retryEl = $('retry'), techEl = $('tech');
   var listenBtn = $('btnListen'), textBtn = $('btnText'), sheetEl = $('sheet'), sheetBody = $('sheetBody'), sheetClose = $('sheetClose');
   var synth = window.speechSynthesis || null;
   var curPdf = null, textCache = [], sheetToken = 0;
@@ -372,7 +425,7 @@ button { font: inherit; color: inherit; }
 
   var pageFlip = null, bookEl = null;
   var items = [], colors = [], imgs = [], blobs = [], shown = {};
-  var DISPLAY_AHEAD = 5, netFail = false;
+  var DISPLAY_AHEAD = 5, netFail = false, lastErr = null;
   var total = 0, pdfCount = 0, aspect = 0.7, token = 0, curIdx = 0;
 
   function setStatus(t) { msgEl.textContent = t || ''; }
@@ -668,6 +721,7 @@ button { font: inherit; color: inherit; }
     stage.insertBefore(el, msgEl);
     stage.setAttribute('data-has-book', 'true');
     bookEl = el;
+    window.__booted = true;
 
     items.forEach(function (it, i) {
       var p = document.createElement('div');
@@ -716,7 +770,7 @@ button { font: inherit; color: inherit; }
   /* ---------- PDF ---------- */
   function openDoc(bytes) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_SRC;
-    return pdfjsLib.getDocument({ data: bytes }).promise;
+    return pdfjsLib.getDocument({ data: bytes, isEvalSupported: false, disableFontFace: true, verbosity: 0 }).promise;
   }
 
   function syncImages() {
@@ -746,30 +800,70 @@ button { font: inherit; color: inherit; }
     return Math.max(700, Math.min(1800, Math.round(h * dpr * 1.15)));
   }
 
-  function renderOne(pdf, i, my) {
+  function canvasToBlob(c) {
+    return new Promise(function (res) {
+      var done = false;
+      function viaDataUrl() {
+        if (done) return;
+        done = true;
+        try {
+          var d = c.toDataURL('image/jpeg', 0.85), bin = atob(d.split(',')[1]), n = bin.length, a = new Uint8Array(n);
+          while (n--) a[n] = bin.charCodeAt(n);
+          res(a.length > 100 ? new Blob([a], { type: 'image/jpeg' }) : null);
+        } catch (e) { res(null); }
+      }
+      try {
+        c.toBlob(function (bl) {
+          if (done) return;
+          if (bl) { done = true; res(bl); } else viaDataUrl();
+        }, 'image/jpeg', 0.85);
+      } catch (e) { viaDataUrl(); }
+    });
+  }
+
+  function renderOne(pdf, i, my, factor) {
     var it = items[i];
     if (it.blank) { colors[i] = null; return Promise.resolve(); }
     return pdf.getPage(it.num).then(function (page) {
       var base = page.getViewport({ scale: 1 });
-      var scale = Math.min(targetHeight() / base.height, 1400 / base.width);
+      var scale = Math.min(targetHeight() * factor / base.height, 1400 * factor / base.width);
       var vp = page.getViewport({ scale: scale });
       var c = document.createElement('canvas');
       c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
       var ctx = c.getContext('2d');
+      if (!ctx) { c.width = c.height = 0; throw new Error('canvas indisponível'); }
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, c.width, c.height);
       return page.render({ canvasContext: ctx, viewport: vp }).promise.then(function () {
         if (my !== token) { c.width = c.height = 0; return; }
         colors[i] = dominant(c);
-        return new Promise(function (res) { c.toBlob(res, 'image/jpeg', 0.85); }).then(function (blob) {
+        return canvasToBlob(c).then(function (blob) {
           c.width = c.height = 0;
           page.cleanup();
-          if (my !== token || !blob) return;
+          if (my !== token) return;
+          if (!blob) throw new Error('sem imagem');
           blobs[i] = blob;
           syncImages();
           updateAmbient();
         });
-      });
+      }).catch(function (e) { c.width = c.height = 0; throw e; });
+    });
+  }
+
+  function markFailed(i) {
+    var img = imgs[i];
+    var ph = img && img.parentNode && img.parentNode.querySelector('.ph');
+    if (ph) ph.textContent = 'Não deu pra carregar a pág. ' + items[i].num;
+  }
+
+  /* se o aparelho não aguenta a página inteira, tenta de novo menor */
+  function renderPage(pdf, i, my) {
+    return renderOne(pdf, i, my, 1).catch(function (e) {
+      console.warn('página', i + 1, 'tentando em tamanho menor', e);
+      return renderOne(pdf, i, my, 0.6);
+    }).catch(function (e) {
+      console.warn('página', i + 1, 'falhou', e);
+      markFailed(i);
     });
   }
 
@@ -789,7 +883,7 @@ button { font: inherit; color: inherit; }
     function lane() {
       if (!pending.length || my !== token) return Promise.resolve();
       var i = nearest();
-      return renderOne(pdf, i, my).catch(function (e) { console.warn('página', i + 1, e); }).then(function () {
+      return renderPage(pdf, i, my).then(function () {
         done++;
         if (my === token) barEl.style.width = (done / all * 100) + '%';
         return lane();
@@ -828,7 +922,7 @@ button { font: inherit; color: inherit; }
     }).catch(function (e) {
       console.error(e);
       if (my !== token) return;
-      if (!pageFlip) { setStatus(''); retryEl.hidden = false; }
+      if (!pageFlip) { setStatus(''); techEl.textContent = describe(e); retryEl.hidden = false; }
       else setStatus('Não consegui ler esse PDF. Confere se o arquivo abre normal e não tem senha.');
     });
   }
@@ -848,32 +942,40 @@ button { font: inherit; color: inherit; }
   function urlOf(path) { return path.split('/').map(encodeURIComponent).join('/'); }
   function nameOf(path) { return path.split('/').pop(); }
 
+  function describe(e) {
+    var ua = navigator.userAgent || '';
+    var br = (ua.match(/(Version|CriOS|EdgiOS|Chrome|SamsungBrowser|Firefox|FxiOS)\/[\d.]+/) || [''])[0];
+    var os = (ua.match(/(iPhone OS|CPU OS|Android) [\d._]+/) || [''])[0].replace(/_/g, '.');
+    var what = e ? ((e.name || '') + (e.message ? ': ' + e.message : '')) : 'erro';
+    return (what || 'erro').slice(0, 140) + ' | ' + br + ' | ' + os;
+  }
+
   function fail(msg, flag) { var e = new Error(msg); e[flag] = true; return e; }
 
   function fetchPdf(path) {
-    return fetch(urlOf(path), { cache: 'no-cache' }).then(function (r) {
-      if (r.status === 404) throw fail('404', 'notFound');
-      if (!r.ok) throw new Error('http ' + r.status);
-      var size = +r.headers.get('Content-Length') || 0;
-      if (!r.body || !r.body.getReader || !size) return r.arrayBuffer();
-      var reader = r.body.getReader(), got = 0, parts = [];
-      return (function pump() {
-        return reader.read().then(function (x) {
-          if (x.done) {
-            var u = new Uint8Array(got), o = 0;
-            parts.forEach(function (p) { u.set(p, o); o += p.length; });
-            return u.buffer;
-          }
-          parts.push(x.value);
-          got += x.value.length;
-          setStatus('Isso Pode Demorar Um Pouco… ' + Math.min(99, Math.round(got / size * 100)) + '%');
-          return pump();
-        });
-      })();
-    }).then(function (buf) {
-      var u = new Uint8Array(buf);
-      if (u.length < 4 || String.fromCharCode(u[0], u[1], u[2], u[3]) !== '%PDF') throw fail('não é PDF', 'notPdf');
-      return u;
+    return new Promise(function (resolve, reject) {
+      var x = new XMLHttpRequest();
+      x.open('GET', urlOf(path), true);
+      x.responseType = 'arraybuffer';
+      x.timeout = 180000;
+      try { x.setRequestHeader('Cache-Control', 'no-cache'); } catch (e) {}
+      x.onprogress = function (ev) {
+        if (ev.lengthComputable && ev.total) {
+          setStatus('Isso Pode Demorar Um Pouco… ' + Math.min(99, Math.round(ev.loaded / ev.total * 100)) + '%');
+        }
+      };
+      x.onload = function () {
+        if (x.status === 404) { reject(fail('404', 'notFound')); return; }
+        if (x.status < 200 || x.status >= 300) { reject(new Error('http ' + x.status)); return; }
+        var u = new Uint8Array(x.response || new ArrayBuffer(0));
+        var head = '', k, lim = Math.min(u.length, 1024);
+        for (k = 0; k < lim; k++) head += String.fromCharCode(u[k]);
+        if (head.indexOf('%PDF-') < 0) { reject(fail('não é PDF', 'notPdf')); return; }
+        resolve(u);
+      };
+      x.onerror = function () { reject(new Error('falha de rede')); };
+      x.ontimeout = function () { reject(new Error('tempo esgotado')); };
+      x.send();
     });
   }
 
@@ -892,7 +994,7 @@ button { font: inherit; color: inherit; }
       return chain.then(function (found) {
         if (found || netFail) return found;
         return fetchWithRetry(path).then(function (bytes) { return { path: path, bytes: bytes }; }, function (e) {
-          if (!e || !(e.notFound || e.notPdf)) netFail = true;
+          if (!e || !(e.notFound || e.notPdf)) { netFail = true; lastErr = e; }
           return null;
         });
       });
@@ -961,7 +1063,9 @@ button { font: inherit; color: inherit; }
 
   /* ---------- início ---------- */
   if (!window.pdfjsLib || !window.St) {
-    setStatus('Não consegui carregar as bibliotecas do livro. Confere a internet e recarrega a página.');
+    setStatus('');
+    techEl.textContent = 'biblioteca não carregou (leitor de PDF: ' + (window.pdfjsLib ? 'ok' : 'não') + ', livro: ' + (window.St ? 'ok' : 'não') + ') | ' + describe(null);
+    retryEl.hidden = false;
     return;
   }
   setStatus('Isso Pode Demorar Um Pouco…');
@@ -970,6 +1074,7 @@ button { font: inherit; color: inherit; }
       showPdf(found.bytes, nameOf(found.path), false);
     } else if (netFail) {
       setStatus('');
+      techEl.textContent = describe(lastErr);
       retryEl.hidden = false;
     } else {
       setStatus('');
@@ -978,6 +1083,13 @@ button { font: inherit; color: inherit; }
   });
 })();
 </script>
+<script>
+setTimeout(function () {
+  var a = document.getElementById('slow');
+  if (a && !window.__booted) a.hidden = false;
+}, 10000);
+</script>
+
 <div vw class="enabled">
   <div vw-access-button class="active"></div>
   <div vw-plugin-wrapper>
